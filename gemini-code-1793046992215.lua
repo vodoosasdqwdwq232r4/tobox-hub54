@@ -1,5 +1,5 @@
 -- =================================================================
--- TOBOX AIM + ВХ [ULTIMATE CYBERPUNK + GORILLA EASTER EGG]
+-- TOBOX AIM + ВХ [ULTIMATE CYBERPUNK + ETERNAL EASTER EGG]
 -- Authors: Nazik & Jura
 -- =================================================================
 local Players = game:GetService("Players")
@@ -434,7 +434,7 @@ KillBtn.MouseButton1Click:Connect(function()
 end)
 
 --------------------------------------------------------------------
--- 4. ЕПІЧНИЙ ПРИКОЛ З ГОРИЛОЮ ТА ФАКСТОМ (EASTER EGG)
+-- 4. ЕПІЧНИЙ ПРИКОЛ З ГОРИЛОЮ (ТЕКСТОВИЙ АРТ / BEAST MODE)
 --------------------------------------------------------------------
 local AuthorLabel = Instance.new("TextButton", Main)
 AuthorLabel.Size, AuthorLabel.Position = UDim2.new(0, 180, 0, 25), UDim2.new(1, -185, 1, -25)
@@ -444,21 +444,19 @@ AuthorLabel.Font, AuthorLabel.TextSize = Enum.Font.SourceSansBold, 16
 AuthorLabel.TextXAlignment = Enum.TextXAlignment.Right
 
 local GorillaFrame = Instance.new("Frame", ScreenGui)
-GorillaFrame.Size, GorillaFrame.Position = UDim2.new(0, 400, 0, 450), UDim2.new(0.5, -200, 0.5, -225)
+GorillaFrame.Size, GorillaFrame.Position = UDim2.new(0, 400, 0, 300), UDim2.new(0.5, -200, 0.5, -150)
 GorillaFrame.Visible, GorillaFrame.ZIndex = false, 200
 ApplyModernStyle(GorillaFrame, Color3.fromRGB(15, 15, 20), Color3.fromRGB(255, 0, 0), 12)
 
-local GorillaImg = Instance.new("ImageLabel", GorillaFrame)
-GorillaImg.Size, GorillaImg.Position = UDim2.new(1, -20, 1, -60), UDim2.new(0, 10, 0, 45)
-GorillaImg.BackgroundTransparency = 1
--- Автоматично підтягує твою картинку `gorilla.png`, яку ти завантажиш у репозиторій GitHub!
-pcall(function()
-    local repoBase = game:HttpGet("https://raw.githubusercontent.com/vodoosasdqwdwq232r4/tobox-hub/refs/heads/main/script.lua") -- автоматичне визначення посилання
-    -- або пряме посилання на твою картинку у трієчці сховища:
-end)
-GorillaImg.Image = "https://raw.githubusercontent.com/vodoosasdqwdwq232r4/tobox-hub/refs/heads/main/gorilla.png"
-GorillaImg.ScaleType = Enum.ScaleType.Fit
-GorillaImg.ZIndex = 201
+local GorillaText = Instance.new("TextLabel", GorillaFrame)
+GorillaText.Size, GorillaText.Position = UDim2.new(1, -20, 1, -50), UDim2.new(0, 10, 0, 40)
+GorillaText.BackgroundTransparency = 1
+GorillaText.Text = "🖕 🦍 🖕\n\nНАЗІК ТА ЮРА КРАСАВИ!\n(ГОРИЛА ПЕРЕМОГЛА РПЦ РОБЛОКСА)"
+GorillaText.TextColor3 = Color3.fromRGB(255, 50, 50)
+GorillaText.Font = Enum.Font.SourceSansBold
+GorillaText.TextSize = 20
+GorillaText.TextWrapped = true
+GorillaText.ZIndex = 201
 
 local GorillaClose = Instance.new("TextButton", GorillaFrame)
 GorillaClose.Size, GorillaClose.Position = UDim2.new(0, 40, 0, 35), UDim2.new(1, -45, 0, 5)
