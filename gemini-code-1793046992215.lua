@@ -1,5 +1,5 @@
 -- =================================================================
--- TOBOX AIM + ВХ [ULTIMATE CYBERPUNK + GORILLA IMAGE EGG]
+-- TOBOX AIM + ВХ [ULTIMATE CYBERPUNK + GORILLA IMAGE EGG] (FIXED & UPDATED)
 -- Authors: Nazik & Jura
 -- =================================================================
 local Players = game:GetService("Players")
@@ -22,7 +22,7 @@ local Features = {
     RGB_FOV = false,
     Aimbot = false, AimAssist = true, InstantLock = true, AimbotFOV = 150, TeamCheck = false, AimTarget = "Head",
     ESP_Box = false, ESP_BoxColor = Color3.fromRGB(170, 0, 255),
-    ESP_FOVColor = Color3.fromRGB(170, 0, 255), ESP_Tracers = false, ESP_Names = false,
+    ESP_FOVColor = Color3.fromRGB(170, 0, 255), ESP_Tracers = false, ESP_Names = false, ESP_MaxDistance = 500,
     SpeedHack = false, SpeedValue = 50, 
     JumpHack = false, JumpValue = 120, 
     Fly = false, FlySpeed = 50,
@@ -376,6 +376,7 @@ AddSlider(AimPage, "Радіус FOV", "AimbotFOV", 30, 400)
 AddToggle(EspPage, "ESP Бокси", "ESP_Box")
 AddToggle(EspPage, "ESP Лінії (Tracers)", "ESP_Tracers")
 AddToggle(EspPage, "ESP Нікнейми", "ESP_Names")
+AddSlider(EspPage, "Дистанція ESP (м)", "ESP_MaxDistance", 100, 1000)
 AddColorPicker(EspPage, "Колір Боксів", "ESP_BoxColor")
 AddColorPicker(EspPage, "Колір Кола FOV", "ESP_FOVColor")
 AddToggle(EspPage, "RGB Колір FOV", "RGB_FOV")
@@ -451,7 +452,7 @@ ApplyModernStyle(GorillaFrame, Color3.fromRGB(15, 15, 20), Color3.fromRGB(255, 0
 local GorillaImg = Instance.new("ImageLabel", GorillaFrame)
 GorillaImg.Size, GorillaImg.Position = UDim2.new(1, -20, 1, -60), UDim2.new(0, 10, 0, 45)
 GorillaImg.BackgroundTransparency = 1
-GorillaImg.Image = "rbxassetid://6023426915" -- Рабочий ID картинки обезьяны в Роблоксе
+GorillaImg.Image = "rbxassetid://6023426915"
 GorillaImg.ScaleType = Enum.ScaleType.Fit
 GorillaImg.ZIndex = 201
 
@@ -525,6 +526,8 @@ RunService:BindToRenderStep("ToboxLoop", Enum.RenderPriority.Camera.Value + 1, f
         FOVCircle.Color = Features.ESP_FOVColor
     end
 
+    local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer then
             if not ESP_Store[p] then
@@ -533,7 +536,9 @@ RunService:BindToRenderStep("ToboxLoop", Enum.RenderPriority.Camera.Value + 1, f
             end
             local e, ch = ESP_Store[p], p.Character
             local hum, root, head = ch and ch:FindFirstChildOfClass("Humanoid"), ch and ch:FindFirstChild("HumanoidRootPart"), ch and ch:FindFirstChild("Head")
-            local valid = ch and root and head and hum and hum.Health > 0 and not (Features.TeamCheck and p.Team == LocalPlayer.Team)
+            
+            local distance = (localRoot and root) and (localRoot.Position - root.Position).Magnitude or 9999
+            local valid = ch and root and head and hum and hum.Health > 0 and (distance <= Features.ESP_MaxDistance) and not (Features.TeamCheck and p.Team == LocalPlayer.Team)
 
             if valid then
                 local v, onS = Camera:WorldToViewportPoint(root.Position)
@@ -542,9 +547,11 @@ RunService:BindToRenderStep("ToboxLoop", Enum.RenderPriority.Camera.Value + 1, f
                     local h = math.abs(hV.Y - lV.Y) local w = h / 1.8
                     e.Box.Visible, e.Box.Size, e.Box.Position, e.Box.Color = Features.ESP_Box, Vector2.new(w, h), Vector2.new(v.X - w/2, hV.Y), Features.ESP_BoxColor
                     e.Tracer.Visible, e.Tracer.From, e.Tracer.To, e.Tracer.Color = Features.ESP_Tracers, Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y), Vector2.new(v.X, lV.Y), Features.ESP_BoxColor
-                    e.Name.Visible, e.Name.Text, e.Name.Position = Features.ESP_Names, p.Name, Vector2.new(v.X, hV.Y - 16)
+                    e.Name.Visible, e.Name.Text, e.Name.Position = Features.ESP_Names, p.Name .. " [" .. math.floor(distance) .. "m]", Vector2.new(v.X, hV.Y - 16)
                 else e.Box.Visible, e.Tracer.Visible, e.Name.Visible = false, false, false end
-            else if e.Box then e.Box.Visible, e.Tracer.Visible, e.Name.Visible = false, false, false end end
+            else 
+                if e.Box then e.Box.Visible, e.Tracer.Visible, e.Name.Visible = false, false, false end 
+            end
         end
     end
 
@@ -583,15 +590,29 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+-- ВИПРАВЛЕНИЙ ТА УСТАНОВЛЕНИЙ ШВИДКИЙ ВИКЛИК ДЛЯ SUPER JUMP ТА SPEEDHACK
 RunService.Heartbeat:Connect(function()
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
     if hum then
-        if Features.SpeedHack then hum.WalkSpeed = Features.SpeedValue end
-        if Features.JumpHack then hum.UseJumpPower = true hum.JumpPower = Features.JumpValue end
+        if Features.SpeedHack then 
+            hum.WalkSpeed = Features.SpeedValue 
+        end
+        if Features.JumpHack then 
+            hum.UseJumpPower = true 
+            hum.JumpPower = Features.JumpValue 
+        end
     end
 end)
 
+-- ВИПРАВЛЕНИЙ INFINITE JUMP
 UserInputService.JumpRequest:Connect(function()
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if Features.InfJump and hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    if Features.InfJump then
+        local char = LocalPlayer.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            hum.Jump = true
+        end
+    end
 end)
