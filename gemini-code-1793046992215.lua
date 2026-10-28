@@ -1,237 +1,328 @@
 -- =================================================================
--- TOBOX AIM + ВХ [ULTIMATE CYBERPUNK + GORILLA IMAGE EGG] (FIXED & UPDATED)
+-- NEROHOLE TACTICAL HUB [PC VERSION: CENTER FOV + AUTO AIM]
 -- Authors: Nazik & Jura
 -- =================================================================
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local PlayerGui = (gethui and gethui()) or LocalPlayer:WaitForChild("PlayerGui")
-if PlayerGui:FindFirstChild("ToboxHub") then PlayerGui.ToboxHub:Destroy() end
+if PlayerGui:FindFirstChild("NeroHoleTacticalHub") then PlayerGui.NeroHoleTacticalHub:Destroy() end
 pcall(function() 
-    RunService:UnbindFromRenderStep("ToboxLoop") 
-    RunService:UnbindFromRenderStep("ToboxFly")
+    RunService:UnbindFromRenderStep("NeroHoleLoop") 
 end)
 
+local CurrentLanguage = "UA"
+local IsDarkMode = true
+
+local Translations = {
+    UA = {
+        Combat = "Бій",
+        Visuals = "Візуали",
+        CharTab = "Персонаж",
+        Keys = "Клавіші",
+        Configs = "Конфіги",
+        Service = "Сервіс",
+        Radar = "Радар",
+        CameraFOV = "FOV Камери (Майнкрафт)",
+        LockMenu = "Закріпити Меню",
+        StreamProof = "Захист від Демонстрації (StreamProof)",
+        Aimbot = "Аімбот (Авто Lock)",
+        AutoFire = "Автострільба (Auto Fire)",
+        TeamCheck = "Team Check",
+        VisibleCheck = "Visible Check",
+        FOVRadius = "Радіус FOV",
+        HeadChance = "Шанс на Голову (%)",
+        BodyChance = "Шанс на Тіло (%)",
+        Nicknames = "Індикатор HP",
+        Boxes = "Бокси ESP",
+        HPBar = "Смужка Здоров'я (HP Bar)",
+        Skeleton = "Скелет",
+        Lines = "Лінії (Tracers)",
+        Distance = "Дистанція (м)",
+        RGB_FOV = "RGB Колір FOV",
+        RGB_Menu = "Фулл Меню RGB (Full RGB)",
+        RGB_ESP = "RGB Підсвітка ESP",
+        SpeedHack = "SpeedHack",
+        SpeedVal = "Швидкість",
+        SuperJump = "Super Jump",
+        JumpVal = "Висота Стрибка",
+        Noclip = "Noclip",
+        InfJump = "Inf Jump",
+        KeyToggle = "Відкриття Меню",
+        KeyAim = "Гаряча клавіша Aim",
+        KeyESP = "Гаряча клавіша ESP",
+        SaveCfg = "Зберегти конфіг",
+        LoadCfg = "Завантажити конфіг",
+        KillSwitch = "🛑 ВИМКНУТИ СКРИПТ"
+    }
+}
+
 local Features = {
-    Platform = "PC",
-    LockMenu = false,
-    RGB_Menu = false,
-    RGB_FOV = false,
-    Aimbot = false, AimAssist = true, InstantLock = true, AimbotFOV = 150, TeamCheck = false, AimTarget = "Head",
-    ESP_Box = false, ESP_BoxColor = Color3.fromRGB(170, 0, 255),
-    ESP_FOVColor = Color3.fromRGB(170, 0, 255), ESP_Tracers = false, ESP_Names = false, ESP_MaxDistance = 500,
-    SpeedHack = false, SpeedValue = 50, 
-    JumpHack = false, JumpValue = 120, 
-    Fly = false, FlySpeed = 50,
-    Noclip = false, InfJump = false
+    Aimbot = false, AutoFire = false, TeamCheck = true, VisibleCheck = true,
+    AimbotFOV = 250, HeadChance = 80, BodyChance = 20,
+    RGB_Menu = false, RGB_FOV = false, RGB_ESP = false,
+    ESP_Box = false, ESP_HPBar = true, ESP_Skeleton = false, ESP_Names = true, ESP_Tracers = false, ESP_Distance = true,
+    ESP_BoxColor = Color3.fromRGB(255, 50, 80),
+    ESP_VisibleColor = Color3.fromRGB(255, 50, 50),
+    ESP_HiddenColor = Color3.fromRGB(255, 200, 0),
+    Radar_Enabled = false, Radar_Size = 130, Radar_MaxDist = 1000, Radar_Unlocked = false,
+    CameraFOVVal = 70, CameraFOVEnabled = false, LockMenu = false, StreamProof = false,
+    SpeedHack = false, SpeedValue = 50,
+    JumpHack = false, JumpValue = 120,
+    Noclip = false, InfJump = false,
+    UIScale = 13, UIThemeColor = Color3.fromRGB(255, 50, 80)
 }
 
 local Keybinds = {
     ToggleMenu = Enum.KeyCode.Insert,
-    AimbotKey = Enum.KeyCode.E,
-    ESPKey = Enum.KeyCode.R,
-    FlyKey = Enum.KeyCode.F
+    AimbotKey = nil,
+    ESPKey = nil
 }
 
-local ColorPalette = {
-    Color3.fromRGB(170, 0, 255), Color3.fromRGB(255, 0, 128), Color3.fromRGB(0, 150, 255),
-    Color3.fromRGB(255, 220, 0), Color3.fromRGB(255, 130, 0), Color3.fromRGB(138, 43, 228),
-    Color3.fromRGB(255, 105, 180), Color3.fromRGB(0, 230, 230), Color3.fromRGB(255, 255, 255), Color3.fromRGB(15, 15, 20)
-}
+local DefaultFOV = Camera.FieldOfView
 
 local ScreenGui = Instance.new("ScreenGui", PlayerGui)
-ScreenGui.Name = "ToboxHub"
+ScreenGui.Name = "NeroHoleTacticalHub"
 ScreenGui.ResetOnSpawn = false
 
-local function ApplyModernStyle(inst, bg, str, radius)
-    inst.BackgroundColor3 = bg or Color3.fromRGB(20, 18, 28)
+local function ApplyTacticalStyle(inst, bg, str, radius)
+    inst.BackgroundColor3 = bg or (IsDarkMode and Color3.fromRGB(16, 15, 23) or Color3.fromRGB(240, 240, 246))
     inst.BorderSizePixel = 0
     local corner = inst:FindFirstChildOfClass("UICorner") or Instance.new("UICorner", inst)
-    corner.CornerRadius = UDim.new(0, radius or 8)
+    corner.CornerRadius = UDim.new(0, radius or 10)
     local stroke = inst:FindFirstChildOfClass("UIStroke") or Instance.new("UIStroke", inst)
-    stroke.Color = str or Color3.fromRGB(90, 30, 150)
-    stroke.Thickness = 1.5
+    stroke.Color = str or (IsDarkMode and Color3.fromRGB(45, 40, 65) or Color3.fromRGB(200, 200, 215))
+    stroke.Thickness = 1.2
     return stroke
 end
 
---------------------------------------------------------------------
--- 1. ВІКНО ВИБОРУ ПЛАТФОРМИ
---------------------------------------------------------------------
-local ModeFrame = Instance.new("Frame", ScreenGui)
-ModeFrame.Size, ModeFrame.Position = UDim2.new(0, 380, 0, 200), UDim2.new(0.5, -190, 0.5, -100)
-ModeFrame.ZIndex = 100
-ApplyModernStyle(ModeFrame, Color3.fromRGB(25, 22, 35), Color3.fromRGB(150, 0, 255), 12)
+-- РАДАР
+local RadarFrame = Instance.new("Frame", ScreenGui)
+RadarFrame.Size = UDim2.new(0, 130, 0, 130)
+RadarFrame.Position = UDim2.new(0.5, -65, 0, 40)
+RadarFrame.Visible = false
+RadarFrame.Active = true
+RadarFrame.Draggable = false
+ApplyTacticalStyle(RadarFrame, Color3.fromRGB(15, 14, 22), Color3.fromRGB(0, 255, 120), 65)
 
-local ModeTitle = Instance.new("TextLabel", ModeFrame)
-ModeTitle.Size, ModeTitle.Position = UDim2.new(1, 0, 0, 50), UDim2.new(0, 0, 0, 10)
-ModeTitle.Text = "ОБЕРІТЬ ПРИСТРІЙ / DEVICE"
-ModeTitle.TextColor3 = Color3.fromRGB(200, 100, 255)
-ModeTitle.Font = Enum.Font.SourceSansBold
-ModeTitle.TextSize = 18
-ModeTitle.BackgroundTransparency = 1
-ModeTitle.ZIndex = 101
+local RadarCenter = Instance.new("Frame", RadarFrame)
+RadarCenter.Size = UDim2.new(0, 8, 0, 8)
+RadarCenter.Position = UDim2.new(0.5, -4, 0.5, -4)
+ApplyTacticalStyle(RadarCenter, Color3.fromRGB(0, 255, 120), Color3.fromRGB(255, 255, 255), 4)
 
-local PcBtn = Instance.new("TextButton", ModeFrame)
-PcBtn.Size, PcBtn.Position = UDim2.new(0, 160, 0, 80), UDim2.new(0, 20, 0, 75)
-PcBtn.Text = "💻 ПК (PC)"
-PcBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-PcBtn.Font = Enum.Font.SourceSansBold
-PcBtn.TextSize = 18
-PcBtn.ZIndex = 101
-ApplyModernStyle(PcBtn, Color3.fromRGB(40, 35, 55), Color3.fromRGB(150, 0, 255), 8)
-
-local MobileBtn = Instance.new("TextButton", ModeFrame)
-MobileBtn.Size, MobileBtn.Position = UDim2.new(0, 160, 0, 80), UDim2.new(1, -180, 0, 75)
-MobileBtn.Text = "📱 ТЕЛЕФОН"
-MobileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MobileBtn.Font = Enum.Font.SourceSansBold
-MobileBtn.TextSize = 18
-MobileBtn.ZIndex = 101
-ApplyModernStyle(MobileBtn, Color3.fromRGB(40, 35, 55), Color3.fromRGB(150, 0, 255), 8)
-
---------------------------------------------------------------------
--- 2. ГОЛОВНЕ МЕНЮ
---------------------------------------------------------------------
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size, Main.Position = UDim2.new(0, 680, 0, 500), UDim2.new(0.5, -340, 0.5, -250)
-Main.Active, Main.Draggable, Main.Visible = true, true, false
-local MainStroke = ApplyModernStyle(Main, Color3.fromRGB(18, 16, 26), Color3.fromRGB(100, 35, 170), 12)
-
-local Header = Instance.new("Frame", Main)
-Header.Size = UDim2.new(1, 0, 0, 40)
-local HeaderStroke = ApplyModernStyle(Header, Color3.fromRGB(14, 12, 20), Color3.fromRGB(80, 25, 140), 12)
-
-local Title = Instance.new("TextLabel", Header)
-Title.Size, Title.Position, Title.BackgroundTransparency = UDim2.new(1, -50, 1, 0), UDim2.new(0, 15, 0, 0), 1
-Title.Text, Title.TextColor3, Title.TextSize, Title.Font = "Tobox aim + вх", Color3.fromRGB(200, 100, 255), 18, Enum.Font.SourceSansBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
-local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Size, CloseBtn.Position = UDim2.new(0, 35, 0, 30), UDim2.new(1, -42, 0, 5)
-CloseBtn.Text, CloseBtn.TextColor3, CloseBtn.TextSize = "-", Color3.fromRGB(220, 220, 220), 22
-ApplyModernStyle(CloseBtn, Color3.fromRGB(35, 28, 50), Color3.fromRGB(120, 40, 190), 6)
-CloseBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
+local RadarDotsContainer = Instance.new("Folder", RadarFrame)
+RadarDotsContainer.Name = "Dots"
 
 local OpenToggle = Instance.new("TextButton", ScreenGui)
-OpenToggle.Size, OpenToggle.Position = UDim2.new(0, 90, 0, 40), UDim2.new(0, 10, 0.4, 0)
-OpenToggle.Text, OpenToggle.TextColor3, OpenToggle.TextSize = "Tobox UI", Color3.fromRGB(255, 255, 255), 15
-OpenToggle.Active, OpenToggle.Draggable, OpenToggle.Visible = true, true, false
-ApplyModernStyle(OpenToggle, Color3.fromRGB(140, 0, 255), Color3.fromRGB(190, 60, 255), 8)
+OpenToggle.Size, OpenToggle.Position = UDim2.new(0, 110, 0, 36), UDim2.new(0, 15, 0.4, 0)
+OpenToggle.Text, OpenToggle.TextColor3, OpenToggle.TextSize = "⚡ NEROHOLE", Color3.fromRGB(255, 255, 255), 13
+OpenToggle.Font = Enum.Font.SourceSansBold
+OpenToggle.Active, OpenToggle.Draggable = true, true
+local OpenStroke = ApplyTacticalStyle(OpenToggle, Color3.fromRGB(20, 18, 28), Color3.fromRGB(0, 255, 120), 8)
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size, Main.Position = UDim2.new(0, 760, 0, 490), UDim2.new(0.5, -380, 0.5, -245)
+Main.Active, Main.Draggable, Main.Visible = true, true, true
+local MainStroke = ApplyTacticalStyle(Main, Color3.fromRGB(14, 13, 20), Color3.fromRGB(55, 45, 75), 12)
+
+local HeaderBar = Instance.new("Frame", Main)
+HeaderBar.Size, HeaderBar.Position = UDim2.new(1, -20, 0, 35), UDim2.new(0, 10, 0, 8)
+ApplyTacticalStyle(HeaderBar, Color3.fromRGB(20, 18, 28), Color3.fromRGB(45, 40, 65), 8)
+
+local TitleHeader = Instance.new("TextLabel", HeaderBar)
+TitleHeader.Size, TitleHeader.Position, TitleHeader.BackgroundTransparency = UDim2.new(0.5, 0, 1, 0), UDim2.new(0, 12, 0, 0), 1
+TitleHeader.Text = "⚡ NEROHOLE Hub (PC)"
+TitleHeader.TextColor3, TitleHeader.Font, TitleHeader.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 14
+TitleHeader.TextXAlignment = Enum.TextXAlignment.Left
+
+local ControlBtnsFrame = Instance.new("Frame", HeaderBar)
+ControlBtnsFrame.Size, ControlBtnsFrame.Position = UDim2.new(0, 70, 0, 24), UDim2.new(1, -75, 0.5, -12)
+ControlBtnsFrame.BackgroundTransparency = 1
+
+local MinimizeBtn = Instance.new("TextButton", ControlBtnsFrame)
+MinimizeBtn.Size, MinimizeBtn.Position = UDim2.new(0, 30, 1, 0), UDim2.new(0, 0, 0, 0)
+MinimizeBtn.Text, MinimizeBtn.TextColor3, MinimizeBtn.TextSize = "—", Color3.fromRGB(220, 220, 220), 14
+MinimizeBtn.Font = Enum.Font.SourceSansBold
+ApplyTacticalStyle(MinimizeBtn, Color3.fromRGB(32, 28, 45), Color3.fromRGB(60, 50, 85), 6)
+
+local CloseBtn = Instance.new("TextButton", ControlBtnsFrame)
+CloseBtn.Size, CloseBtn.Position = UDim2.new(0, 30, 1, 0), UDim2.new(1, -30, 0, 0)
+CloseBtn.Text, CloseBtn.TextColor3, CloseBtn.TextSize = "✕", Color3.fromRGB(255, 90, 90), 13
+CloseBtn.Font = Enum.Font.SourceSansBold
+ApplyTacticalStyle(CloseBtn, Color3.fromRGB(45, 20, 30), Color3.fromRGB(180, 40, 60), 6)
+
+MinimizeBtn.MouseButton1Click:Connect(function() Main.Visible = false end)
+CloseBtn.MouseButton1Click:Connect(function()
+    pcall(function() RunService:UnbindFromRenderStep("NeroHoleLoop") end)
+    Camera.FieldOfView = DefaultFOV
+    ScreenGui:Destroy()
+end)
+
 OpenToggle.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if Keybinds.ToggleMenu and input.KeyCode == Keybinds.ToggleMenu then
-        Main.Visible = not Main.Visible
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp then
+        if Keybinds.ToggleMenu and input.KeyCode == Keybinds.ToggleMenu then Main.Visible = not Main.Visible end
+        if Keybinds.AimbotKey and input.KeyCode == Keybinds.AimbotKey then Features.Aimbot = not Features.Aimbot end
+        if Keybinds.ESPKey and input.KeyCode == Keybinds.ESPKey then 
+            Features.ESP_Box = not Features.ESP_Box 
+            Features.ESP_Skeleton = not Features.ESP_Skeleton 
+        end
     end
 end)
 
-local function InitScript(mode)
-    Features.Platform = mode
-    ModeFrame:Destroy()
-    Main.Visible = true
-    OpenToggle.Visible = true
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Size, Sidebar.Position = UDim2.new(0, 190, 1, -60), UDim2.new(0, 10, 0, 50)
+ApplyTacticalStyle(Sidebar, Color3.fromRGB(18, 16, 26), Color3.fromRGB(40, 35, 60), 10)
+
+local SidebarLayout = Instance.new("UIListLayout", Sidebar)
+SidebarLayout.Padding = UDim.new(0, 5)
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local Content = Instance.new("Frame", Main)
+Content.Size, Content.Position = UDim2.new(1, -215, 1, -60), UDim2.new(0, 210, 0, 50)
+Content.BackgroundTransparency = 1
+
+local Pages = {}
+local function CreatePage()
+    local p = Instance.new("ScrollingFrame", Content)
+    p.Size, p.Position, p.Visible, p.BackgroundTransparency = UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0), false, 1
+    p.ScrollBarThickness = 4
+    p.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    local l = Instance.new("UIListLayout", p)
+    l.Padding = UDim.new(0, 6)
+    l.SortOrder = Enum.SortOrder.LayoutOrder
+    return p
 end
 
-PcBtn.MouseButton1Click:Connect(function() InitScript("PC") end)
-MobileBtn.MouseButton1Click:Connect(function() InitScript("Mobile") end)
+local pagesData = {
+    Combat = CreatePage(),
+    Visuals = CreatePage(),
+    CharTab = CreatePage(),
+    Keys = CreatePage(),
+    Configs = CreatePage(),
+    Service = CreatePage()
+}
 
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size, Sidebar.Position = UDim2.new(0, 150, 1, -40), UDim2.new(0, 0, 0, 40)
-ApplyModernStyle(Sidebar, Color3.fromRGB(16, 14, 23), Color3.fromRGB(70, 25, 120), 10)
-
-local SideList = Instance.new("UIListLayout", Sidebar)
-SideList.SortOrder = Enum.SortOrder.LayoutOrder
-
-local ContentHolder = Instance.new("Frame", Main)
-ContentHolder.Size, ContentHolder.Position = UDim2.new(1, -150, 1, -40), UDim2.new(0, 150, 0, 40)
-ContentHolder.BackgroundTransparency = 1
-
-local Tabs = {}
-local function CreateTab(name, iconText)
+local navButtons = {}
+local function AddNavButton(nameKey, icon)
     local btn = Instance.new("TextButton", Sidebar)
-    btn.Size = UDim2.new(1, 0, 0, 45)
-    btn.Text = "  " .. iconText .. " " .. name
-    btn.TextColor3, btn.TextSize, btn.Font = Color3.fromRGB(180, 170, 200), 14, Enum.Font.SourceSansBold
+    btn.Size = UDim2.new(1, 0, 0, 38)
+    btn.Text = "   " .. icon .. "  " .. Translations[CurrentLanguage][nameKey]
+    btn.TextColor3, btn.Font, btn.TextSize = Color3.fromRGB(180, 175, 200), Enum.Font.SourceSansBold, 13
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    ApplyModernStyle(btn, Color3.fromRGB(16, 14, 23), Color3.fromRGB(50, 18, 90), 6)
-
-    local page = Instance.new("ScrollingFrame", ContentHolder)
-    page.Size, page.Position, page.Visible = UDim2.new(1, -20, 1, -20), UDim2.new(0, 10, 0, 10), false
-    page.BackgroundTransparency, page.ScrollBarThickness = 1, 5
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-    local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0, 8)
-
-    Tabs[name] = {Btn = btn, Page = page}
+    ApplyTacticalStyle(btn, Color3.fromRGB(24, 21, 34), Color3.fromRGB(50, 42, 70), 8)
 
     btn.MouseButton1Click:Connect(function()
-        for _, t in pairs(Tabs) do
-            t.Page.Visible = false
-            t.Btn.BackgroundColor3 = Color3.fromRGB(16, 14, 23)
-            t.Btn.TextColor3 = Color3.fromRGB(180, 170, 200)
-        end
-        page.Visible = true
-        btn.BackgroundColor3 = Color3.fromRGB(130, 0, 240)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        for _, pg in pairs(Pages) do pg.Visible = false end
+        pagesData[nameKey].Visible = true
     end)
-    return page
+    Pages[nameKey] = pagesData[nameKey]
+    table.insert(navButtons, {Btn = btn, Key = nameKey})
 end
 
-local AimPage = CreateTab("Аімбот", "🎯")
-local EspPage = CreateTab("ВХ / ESP", "👁️")
-local CharPage = CreateTab("Персонаж", "🏃")
-local KeyPage = CreateTab("Клавіші", "⌨️")
-local SettPage = CreateTab("Налаштування", "⚙️")
+AddNavButton("Combat", "⚔️")
+AddNavButton("Visuals", "👁️")
+AddNavButton("CharTab", "🏃")
+AddNavButton("Keys", "⌨️")
+AddNavButton("Configs", "📁")
+AddNavButton("Service", "⚙️")
 
-Tabs["Аімбот"].Page.Visible = true
-Tabs["Аімбот"].Btn.BackgroundColor3 = Color3.fromRGB(130, 0, 240)
-Tabs["Аімбот"].Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+pagesData["Combat"].Visible = true
 
---------------------------------------------------------------------
--- КОМПОНЕНТИ ІНТЕРФЕЙСУ
---------------------------------------------------------------------
-local function AddToggle(page, name, key)
-    local btn = Instance.new("TextButton", page)
-    btn.Size = UDim2.new(1, 0, 0, 42)
-    btn.Font, btn.TextSize = Enum.Font.SourceSansBold, 15
+local BottomBar = Instance.new("Frame", Sidebar)
+BottomBar.Size, BottomBar.Position = UDim2.new(1, -10, 0, 40), UDim2.new(0, 5, 1, -45)
+ApplyTacticalStyle(BottomBar, Color3.fromRGB(14, 13, 20), Color3.fromRGB(40, 35, 60), 8)
+
+local ThemeToggle = Instance.new("TextButton", BottomBar)
+ThemeToggle.Size, ThemeToggle.Position = UDim2.new(0.45, 0, 1, 0), UDim2.new(0, 0, 0, 0)
+ThemeToggle.Text = "🌙"
+ThemeToggle.TextColor3, ThemeToggle.TextSize = Color3.fromRGB(255, 255, 255), 15
+ApplyTacticalStyle(ThemeToggle, Color3.fromRGB(30, 26, 42), Color3.fromRGB(60, 50, 85), 6)
+
+local LangToggle = Instance.new("TextButton", BottomBar)
+LangToggle.Size, LangToggle.Position = UDim2.new(0.5, 0, 1, 0), UDim2.new(0.5, 5, 0, 0)
+LangToggle.Text = "🇺🇦 UA"
+LangToggle.TextColor3, LangToggle.Font, LangToggle.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 12
+ApplyTacticalStyle(LangToggle, Color3.fromRGB(30, 26, 42), Color3.fromRGB(60, 50, 85), 6)
+
+local SystemListText
+
+local function UpdateSystemList()
+    if not SystemListText then return end
+    local spStatus = Features.StreamProof and "Увімкнено" or "Вимкнено"
+    local rgbStatus = Features.RGB_Menu and "Увімкнено" or "Вимкнено"
+    local radarStatus = Features.Radar_Enabled and "Увімкнено" or "Вимкнено"
+    local aimStatus = Features.Aimbot and "Авто-Аім (Вкл)" or "Вимкнено"
     
-    local function update()
-        if Features[key] then
-            btn.Text = "[ УВІМКНЕНО ] " .. name
-            ApplyModernStyle(btn, Color3.fromRGB(140, 0, 255), Color3.fromRGB(200, 90, 255), 8)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        else
-            btn.Text = "[ ВИМКНЕНО ] " .. name
-            ApplyModernStyle(btn, Color3.fromRGB(30, 26, 42), Color3.fromRGB(70, 45, 105), 8)
-            btn.TextColor3 = Color3.fromRGB(170, 160, 190)
-        end
-    end
-    btn.MouseButton1Click:Connect(function() Features[key] = not Features[key] update() end)
-    update()
+    SystemListText.Text = string.format(
+        "• Статус: NEROHOLE Активний\n• Аімбот: %s\n• Захист екрану: %s\n• RGB Меню: %s\n• Радар: %s",
+        aimStatus, spStatus, rgbStatus, radarStatus
+    )
 end
 
-local function AddSlider(page, name, key, minVal, maxVal)
+local function AddToggle(page, textKey, key)
     local card = Instance.new("Frame", page)
-    card.Size = UDim2.new(1, 0, 0, 50)
-    ApplyModernStyle(card, Color3.fromRGB(26, 22, 38), Color3.fromRGB(75, 35, 120), 8)
+    card.Size = UDim2.new(1, -10, 0, 42)
+    ApplyTacticalStyle(card, Color3.fromRGB(22, 20, 32), Color3.fromRGB(48, 42, 68), 8)
 
     local lbl = Instance.new("TextLabel", card)
-    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(1, -10, 0, 22), UDim2.new(0, 10, 0, 2), 1
-    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = name .. ": " .. tostring(Features[key]), Color3.fromRGB(240, 230, 255), Enum.Font.SourceSansBold, 14
+    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(0.7, 0, 1, 0), UDim2.new(0, 12, 0, 0), 1
+    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = Translations[CurrentLanguage][textKey] or textKey, Color3.fromRGB(230, 225, 245), Enum.Font.SourceSansBold, Features.UIScale
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local tog = Instance.new("TextButton", card)
+    tog.Size, tog.Position = UDim2.new(0, 42, 0, 22), UDim2.new(1, -52, 0.5, -11)
+    tog.Text = ""
+    ApplyTacticalStyle(tog, Features[key] and Features.UIThemeColor or Color3.fromRGB(40, 35, 55), Color3.fromRGB(75, 65, 100), 11)
+
+    tog.MouseButton1Click:Connect(function()
+        Features[key] = not Features[key]
+        ApplyTacticalStyle(tog, Features[key] and Features.UIThemeColor or Color3.fromRGB(40, 35, 55), Color3.fromRGB(75, 65, 100), 11)
+        
+        if key == "Radar_Enabled" then
+            RadarFrame.Visible = Features[key]
+        elseif key == "Radar_Unlocked" then
+            RadarFrame.Draggable = Features[key]
+        elseif key == "LockMenu" then
+            Main.Draggable = not Features[key]
+        elseif key == "StreamProof" then
+            pcall(function()
+                ScreenGui.DisplayOrder = Features[key] and 999999 or 1
+            end)
+        elseif key == "CameraFOVEnabled" then
+            if not Features[key] then
+                Camera.FieldOfView = DefaultFOV
+            end
+        end
+        
+        UpdateSystemList()
+    end)
+end
+
+local function AddSlider(page, nameKey, key, minVal, maxVal)
+    local card = Instance.new("Frame", page)
+    card.Size = UDim2.new(1, -10, 0, 50)
+    ApplyTacticalStyle(card, Color3.fromRGB(22, 20, 32), Color3.fromRGB(48, 42, 68), 8)
+
+    local realName = Translations[CurrentLanguage][nameKey] or nameKey
+    local lbl = Instance.new("TextLabel", card)
+    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(1, -10, 0, 22), UDim2.new(0, 12, 0, 2), 1
+    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = realName .. ": " .. tostring(Features[key]), Color3.fromRGB(230, 225, 245), Enum.Font.SourceSansBold, Features.UIScale
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local sliderBg = Instance.new("Frame", card)
-    sliderBg.Size, sliderBg.Position = UDim2.new(1, -20, 0, 12), UDim2.new(0, 10, 0, 28)
-    ApplyModernStyle(sliderBg, Color3.fromRGB(14, 12, 20), Color3.fromRGB(55, 25, 90), 6)
+    sliderBg.Size, sliderBg.Position = UDim2.new(1, -24, 0, 10), UDim2.new(0, 12, 0, 30)
+    ApplyTacticalStyle(sliderBg, Color3.fromRGB(14, 13, 20), Color3.fromRGB(40, 35, 55), 5)
 
     local fill = Instance.new("Frame", sliderBg)
-    local pct = (Features[key] - minVal) / (maxVal - minVal)
+    local pct = math.clamp((Features[key] - minVal) / (maxVal - minVal), 0, 1)
     fill.Size = UDim2.new(pct, 0, 1, 0)
-    ApplyModernStyle(fill, Color3.fromRGB(150, 0, 255), Color3.fromRGB(200, 90, 255), 6)
+    ApplyTacticalStyle(fill, Features.UIThemeColor, Color3.fromRGB(100, 255, 150), 5)
 
     local dragging = false
     local function updateSlider(input)
@@ -240,7 +331,10 @@ local function AddSlider(page, name, key, minVal, maxVal)
         local val = math.floor(minVal + (maxVal - minVal) * alpha)
         Features[key] = val
         fill.Size = UDim2.new(alpha, 0, 1, 0)
-        lbl.Text = name .. ": " .. tostring(val)
+        lbl.Text = realName .. ": " .. tostring(val)
+        if key == "Radar_Size" then
+            RadarFrame.Size = UDim2.new(0, val, 0, val)
+        end
     end
 
     sliderBg.InputBegan:Connect(function(input)
@@ -261,99 +355,31 @@ local function AddSlider(page, name, key, minVal, maxVal)
     end)
 end
 
-local function AddDropdown(page, name, key, opts)
+local function AddKeybind(page, textKey, keyName)
     local card = Instance.new("Frame", page)
-    card.Size = UDim2.new(1, 0, 0, 42)
-    ApplyModernStyle(card, Color3.fromRGB(26, 22, 38), Color3.fromRGB(75, 35, 120), 8)
+    card.Size = UDim2.new(1, -10, 0, 42)
+    ApplyTacticalStyle(card, Color3.fromRGB(22, 20, 32), Color3.fromRGB(48, 42, 68), 8)
 
     local lbl = Instance.new("TextLabel", card)
-    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(0.5, 0, 1, 0), UDim2.new(0, 10, 0, 0), 1
-    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = name, Color3.fromRGB(240, 230, 255), Enum.Font.SourceSansBold, 14
+    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(0.4, 0, 1, 0), UDim2.new(0, 12, 0, 0), 1
+    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = Translations[CurrentLanguage][textKey] or textKey, Color3.fromRGB(230, 225, 245), Enum.Font.SourceSansBold, 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local btn = Instance.new("TextButton", card)
-    btn.Size, btn.Position = UDim2.new(0.45, 0, 0.8, 0), UDim2.new(0.52, 0, 0.1, 0)
-    btn.Text, btn.TextColor3, btn.Font, btn.TextSize = tostring(Features[key]), Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 14
-    ApplyModernStyle(btn, Color3.fromRGB(140, 0, 255), Color3.fromRGB(200, 90, 255), 6)
-
-    local idx = 1
-    btn.MouseButton1Click:Connect(function()
-        idx = idx % #opts + 1
-        Features[key] = opts[idx]
-        btn.Text = tostring(Features[key])
-    end)
-end
-
-local function AddColorPicker(page, name, key)
-    local card = Instance.new("Frame", page)
-    card.Size = UDim2.new(1, 0, 0, 42)
-    ApplyModernStyle(card, Color3.fromRGB(26, 22, 38), Color3.fromRGB(75, 35, 120), 8)
-
-    local lbl = Instance.new("TextLabel", card)
-    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(0.6, 0, 1, 0), UDim2.new(0, 10, 0, 0), 1
-    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = name, Color3.fromRGB(240, 230, 255), Enum.Font.SourceSansBold, 14
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local colorPreview = Instance.new("TextButton", card)
-    colorPreview.Size, colorPreview.Position = UDim2.new(0, 30, 0, 28), UDim2.new(1, -38, 0, 7)
-    colorPreview.Text = ""
-    ApplyModernStyle(colorPreview, Features[key], Color3.fromRGB(255, 255, 255), 6)
-
-    local pickerFrame = Instance.new("Frame", ScreenGui)
-    pickerFrame.Size, pickerFrame.Position, pickerFrame.Visible = UDim2.new(0, 170, 0, 75), UDim2.new(0.5, -85, 0.5, -37), false
-    pickerFrame.ZIndex = 50
-    ApplyModernStyle(pickerFrame, Color3.fromRGB(16, 14, 24), Color3.fromRGB(150, 0, 255), 10)
-
-    local grid = Instance.new("UIGridLayout", pickerFrame)
-    grid.CellSize, grid.CellPadding = UDim2.new(0, 28, 0, 28), UDim2.new(0, 4, 0, 4)
-
-    for _, color in ipairs(ColorPalette) do
-        local sq = Instance.new("TextButton", pickerFrame)
-        sq.Text, sq.ZIndex = "", 51
-        ApplyModernStyle(sq, color, Color3.fromRGB(0, 0, 0), 4)
-        sq.MouseButton1Click:Connect(function()
-            Features[key] = color
-            colorPreview.BackgroundColor3 = color
-            pickerFrame.Visible = false
-        end)
-    end
-
-    colorPreview.MouseButton1Click:Connect(function()
-        pickerFrame.Visible = not pickerFrame.Visible
-    end)
-end
-
-local function AddKeybind(page, name, keyName)
-    local card = Instance.new("Frame", page)
-    card.Size = UDim2.new(1, 0, 0, 42)
-    ApplyModernStyle(card, Color3.fromRGB(26, 22, 38), Color3.fromRGB(75, 35, 120), 8)
-
-    local lbl = Instance.new("TextLabel", card)
-    lbl.Size, lbl.Position, lbl.BackgroundTransparency = UDim2.new(0.4, 0, 1, 0), UDim2.new(0, 10, 0, 0), 1
-    lbl.Text, lbl.TextColor3, lbl.Font, lbl.TextSize = name, Color3.fromRGB(240, 230, 255), Enum.Font.SourceSansBold, 14
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local btn = Instance.new("TextButton", card)
-    btn.Size, btn.Position = UDim2.new(0.35, 0, 0.8, 0), UDim2.new(0.42, 0, 0.1, 0)
+    btn.Size, btn.Position = UDim2.new(0.28, 0, 0.8, 0), UDim2.new(0.42, 0, 0.1, 0)
     btn.Text = Keybinds[keyName] and tostring(Keybinds[keyName].Name) or "None"
-    btn.TextColor3, btn.Font, btn.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 14
-    ApplyModernStyle(btn, Color3.fromRGB(140, 0, 255), Color3.fromRGB(200, 90, 255), 6)
+    btn.TextColor3, btn.Font, btn.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 12
+    ApplyTacticalStyle(btn, Color3.fromRGB(40, 35, 55), Color3.fromRGB(75, 65, 100), 6)
 
-    local clearBtn = Instance.new("TextButton", card)
-    clearBtn.Size, clearBtn.Position = UDim2.new(0, 35, 0.8, 0), UDim2.new(0.8, -5, 0.1, 0)
-    clearBtn.Text, clearBtn.TextColor3, clearBtn.Font, clearBtn.TextSize = "X", Color3.fromRGB(255, 100, 100), Enum.Font.SourceSansBold, 14
-    ApplyModernStyle(clearBtn, Color3.fromRGB(50, 20, 50), Color3.fromRGB(180, 50, 50), 6)
-
-    clearBtn.MouseButton1Click:Connect(function()
-        Keybinds[keyName] = nil
-        btn.Text = "None"
-    end)
+    local resetBtn = Instance.new("TextButton", card)
+    resetBtn.Size, resetBtn.Position = UDim2.new(0, 34, 0.8, 0), UDim2.new(0.72, 6, 0.1, 0)
+    resetBtn.Text = "✕"
+    resetBtn.TextColor3, resetBtn.Font, resetBtn.TextSize = Color3.fromRGB(255, 90, 90), Enum.Font.SourceSansBold, 13
+    ApplyTacticalStyle(resetBtn, Color3.fromRGB(45, 20, 30), Color3.fromRGB(180, 40, 60), 6)
 
     local binding = false
-    btn.MouseButton1Click:Connect(function()
-        btn.Text = "..."
-        binding = true
-    end)
+    btn.MouseButton1Click:Connect(function() btn.Text = "..." binding = true end)
+    resetBtn.MouseButton1Click:Connect(function() binding = false Keybinds[keyName] = nil btn.Text = "None" end)
 
     UserInputService.InputBegan:Connect(function(input)
         if binding and input.UserInputType == Enum.UserInputType.Keyboard then
@@ -364,255 +390,422 @@ local function AddKeybind(page, name, keyName)
     end)
 end
 
---------------------------------------------------------------------
--- 3. НАПОВНЕННЯ ВКЛАДОК
---------------------------------------------------------------------
-AddToggle(AimPage, "Аімбот Увімкнути", "Aimbot")
-AddToggle(AimPage, "Аім Асист (Sticky Lock)", "AimAssist")
-AddDropdown(AimPage, "Ціль Наведення", "AimTarget", {"Head", "HumanoidRootPart"})
-AddToggle(AimPage, "Team Check", "TeamCheck")
-AddSlider(AimPage, "Радіус FOV", "AimbotFOV", 30, 400)
+-- Вкладка Бій
+AddToggle(pagesData["Combat"], "Aimbot", "Aimbot")
+AddToggle(pagesData["Combat"], "AutoFire", "AutoFire")
+AddSlider(pagesData["Combat"], "FOVRadius", "AimbotFOV", 30, 1500)
+AddSlider(pagesData["Combat"], "HeadChance", "HeadChance", 0, 100)
+AddSlider(pagesData["Combat"], "BodyChance", "BodyChance", 0, 100)
+AddToggle(pagesData["Combat"], "TeamCheck", "TeamCheck")
+AddToggle(pagesData["Combat"], "VisibleCheck", "VisibleCheck")
+AddToggle(pagesData["Combat"], "RGB_FOV", "RGB_FOV")
 
-AddToggle(EspPage, "ESP Бокси", "ESP_Box")
-AddToggle(EspPage, "ESP Лінії (Tracers)", "ESP_Tracers")
-AddToggle(EspPage, "ESP Нікнейми", "ESP_Names")
-AddSlider(EspPage, "Дистанція ESP (м)", "ESP_MaxDistance", 100, 1000)
-AddColorPicker(EspPage, "Колір Боксів", "ESP_BoxColor")
-AddColorPicker(EspPage, "Колір Кола FOV", "ESP_FOVColor")
-AddToggle(EspPage, "RGB Колір FOV", "RGB_FOV")
+-- Вкладка Візуали
+AddToggle(pagesData["Visuals"], "Nicknames", "ESP_Names")
+AddToggle(pagesData["Visuals"], "Boxes", "ESP_Box")
+AddToggle(pagesData["Visuals"], "HPBar", "ESP_HPBar")
+AddToggle(pagesData["Visuals"], "Distance", "ESP_Distance")
+AddToggle(pagesData["Visuals"], "Skeleton", "ESP_Skeleton")
+AddToggle(pagesData["Visuals"], "Lines", "ESP_Tracers")
+AddToggle(pagesData["Visuals"], "RGB_ESP", "RGB_ESP")
 
-AddToggle(CharPage, "SpeedHack", "SpeedHack")
-AddSlider(CharPage, "Значення Швидкості", "SpeedValue", 16, 300)
+-- Радар
+AddToggle(pagesData["Visuals"], "Radar", "Radar_Enabled")
+AddSlider(pagesData["Visuals"], "Розмір Радару", "Radar_Size", 80, 250)
+AddSlider(pagesData["Visuals"], "Дистанція Радару (м)", "Radar_MaxDist", 500, 3000)
+AddToggle(pagesData["Visuals"], "Переміщення Радару", "Radar_Unlocked")
 
-AddToggle(CharPage, "Super Jump", "JumpHack")
-AddSlider(CharPage, "Висота Стрибка", "JumpValue", 50, 400)
+-- Вкладка Персонаж
+AddToggle(pagesData["CharTab"], "SpeedHack", "SpeedHack")
+AddSlider(pagesData["CharTab"], "SpeedVal", "SpeedValue", 16, 200)
+AddToggle(pagesData["CharTab"], "SuperJump", "JumpHack")
+AddSlider(pagesData["CharTab"], "JumpVal", "JumpValue", 50, 300)
+AddToggle(pagesData["CharTab"], "Noclip", "Noclip")
+AddToggle(pagesData["CharTab"], "InfJump", "InfJump")
+AddToggle(pagesData["CharTab"], "CameraFOV", "CameraFOVEnabled")
+AddSlider(pagesData["CharTab"], "Ширина Камери (FOV)", "CameraFOVVal", 30, 140)
 
-AddToggle(CharPage, "Fly (Політ)", "Fly")
-AddSlider(CharPage, "Швидкість Польоту", "FlySpeed", 20, 250)
+AddKeybind(pagesData["Keys"], "KeyToggle", "ToggleMenu")
+AddKeybind(pagesData["Keys"], "KeyAim", "AimbotKey")
+AddKeybind(pagesData["Keys"], "KeyESP", "ESPKey")
 
-AddToggle(CharPage, "NoClip", "Noclip")
-AddToggle(CharPage, "Inf Jump", "InfJump")
+-- Вкладка Сервіс
+AddToggle(pagesData["Service"], "LockMenu", "LockMenu")
+AddToggle(pagesData["Service"], "StreamProof", "StreamProof")
+AddToggle(pagesData["Service"], "RGB_Menu", "RGB_Menu")
 
-AddKeybind(KeyPage, "Відкриття Меню", "ToggleMenu")
-AddKeybind(KeyPage, "Гаряча клавіша Aim", "AimbotKey")
-AddKeybind(KeyPage, "Гаряча клавіша ESP", "ESPKey")
-AddKeybind(KeyPage, "Гаряча клавіша Fly", "FlyKey")
+-- СПИСОК АКТИВНИХ СИСТЕМ
+local SystemListCard = Instance.new("Frame", pagesData["Service"])
+SystemListCard.Size = UDim2.new(1, -10, 0, 120)
+ApplyTacticalStyle(SystemListCard, Color3.fromRGB(22, 20, 32), Color3.fromRGB(48, 42, 68), 8)
 
-AddToggle(SettPage, "RGB Підсвітка Меню", "RGB_Menu")
+local SystemListTitle = Instance.new("TextLabel", SystemListCard)
+SystemListTitle.Size, SystemListTitle.Position, SystemListTitle.BackgroundTransparency = UDim2.new(1, -20, 0, 24), UDim2.new(0, 12, 0, 4), 1
+SystemListTitle.Text = "📋 Список Активних Систем:"
+SystemListTitle.TextColor3, SystemListTitle.Font, SystemListTitle.TextSize = Color3.fromRGB(0, 255, 120), Enum.Font.SourceSansBold, 13
+SystemListTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local ToggleLock = Instance.new("TextButton", SettPage)
-ToggleLock.Size = UDim2.new(1, 0, 0, 42)
-ToggleLock.Font, ToggleLock.TextSize = Enum.Font.SourceSansBold, 15
+SystemListText = Instance.new("TextLabel", SystemListCard)
+SystemListText.Size, SystemListText.Position, SystemListText.BackgroundTransparency = UDim2.new(1, -20, 1, -30), UDim2.new(0, 12, 0, 26), 1
+SystemListText.TextColor3, SystemListText.Font, SystemListText.TextSize = Color3.fromRGB(200, 195, 220), Enum.Font.SourceSans, 12
+SystemListText.TextXAlignment = Enum.TextXAlignment.Left
+SystemListText.TextYAlignment = Enum.TextYAlignment.Top
 
-local function updateLockBtn()
-    if Features.LockMenu then
-        ToggleLock.Text = "[ БЛОКУВАННЯ МЕНЮ: УВІМКНЕНО ]"
-        Main.Draggable = false
-        ApplyModernStyle(ToggleLock, Color3.fromRGB(150, 0, 255), Color3.fromRGB(200, 90, 255), 8)
-    else
-        ToggleLock.Text = "[ БЛОКУВАННЯ МЕНЮ: ВИМКНЕНО ]"
-        Main.Draggable = true
-        ApplyModernStyle(ToggleLock, Color3.fromRGB(30, 26, 42), Color3.fromRGB(70, 45, 105), 8)
-    end
-end
-ToggleLock.MouseButton1Click:Connect(function()
-    Features.LockMenu = not Features.LockMenu
-    updateLockBtn()
-end)
-updateLockBtn()
+UpdateSystemList()
 
-local KillBtn = Instance.new("TextButton", SettPage)
-KillBtn.Size = UDim2.new(1, 0, 0, 45)
+local SaveCfgBtn = Instance.new("TextButton", pagesData["Configs"])
+SaveCfgBtn.Size = UDim2.new(1, -10, 0, 42)
+SaveCfgBtn.Text = "💾 Зберегти конфіг"
+SaveCfgBtn.TextColor3, SaveCfgBtn.Font, SaveCfgBtn.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 13
+ApplyTacticalStyle(SaveCfgBtn, Color3.fromRGB(0, 160, 80), Color3.fromRGB(0, 220, 110), 8)
+
+local LoadCfgBtn = Instance.new("TextButton", pagesData["Configs"])
+LoadCfgBtn.Size = UDim2.new(1, -10, 0, 42)
+LoadCfgBtn.Text = "📂 Завантажити конфіг"
+LoadCfgBtn.TextColor3, LoadCfgBtn.Font, LoadCfgBtn.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 13
+ApplyTacticalStyle(LoadCfgBtn, Color3.fromRGB(0, 120, 200), Color3.fromRGB(50, 160, 255), 8)
+
+local KillBtn = Instance.new("TextButton", pagesData["Service"])
+KillBtn.Size = UDim2.new(1, -10, 0, 42)
 KillBtn.Text = "🛑 ВИМКНУТИ СКРИПТ (KILL SWITCH)"
-KillBtn.TextColor3, KillBtn.Font, KillBtn.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 15
-ApplyModernStyle(KillBtn, Color3.fromRGB(180, 30, 70), Color3.fromRGB(230, 60, 110), 8)
+KillBtn.TextColor3, KillBtn.Font, KillBtn.TextSize = Color3.fromRGB(255, 255, 255), Enum.Font.SourceSansBold, 13
+ApplyTacticalStyle(KillBtn, Color3.fromRGB(180, 30, 50), Color3.fromRGB(255, 60, 80), 8)
 KillBtn.MouseButton1Click:Connect(function()
-    pcall(function() 
-        RunService:UnbindFromRenderStep("ToboxLoop")
-        RunService:UnbindFromRenderStep("ToboxFly") 
-    end)
+    pcall(function() RunService:UnbindFromRenderStep("NeroHoleLoop") end)
+    Camera.FieldOfView = DefaultFOV
     ScreenGui:Destroy()
 end)
 
---------------------------------------------------------------------
--- 4. ЕПІЧНИЙ ПРИКОЛ З ГОРИЛОЮ (КАРТИНКА ЧЕРЕЗ RBXASSETID)
---------------------------------------------------------------------
-local AuthorLabel = Instance.new("TextButton", Main)
-AuthorLabel.Size, AuthorLabel.Position = UDim2.new(0, 180, 0, 25), UDim2.new(1, -185, 1, -25)
-AuthorLabel.BackgroundTransparency = 1
-AuthorLabel.Text = "Autor by nazik and jura"
-AuthorLabel.Font, AuthorLabel.TextSize = Enum.Font.SourceSansBold, 16
-AuthorLabel.TextXAlignment = Enum.TextXAlignment.Right
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Thickness, FOVCircle.Filled, FOVCircle.Visible = 1.5, false, false
 
-local GorillaFrame = Instance.new("Frame", ScreenGui)
-GorillaFrame.Size, GorillaFrame.Position = UDim2.new(0, 400, 0, 450), UDim2.new(0.5, -200, 0.5, -225)
-GorillaFrame.Visible, GorillaFrame.ZIndex = false, 200
-ApplyModernStyle(GorillaFrame, Color3.fromRGB(15, 15, 20), Color3.fromRGB(255, 0, 0), 12)
+local ESP_Store = {}
+local RadarDots = {}
 
-local GorillaImg = Instance.new("ImageLabel", GorillaFrame)
-GorillaImg.Size, GorillaImg.Position = UDim2.new(1, -20, 1, -60), UDim2.new(0, 10, 0, 45)
-GorillaImg.BackgroundTransparency = 1
-GorillaImg.Image = "rbxassetid://6023426915"
-GorillaImg.ScaleType = Enum.ScaleType.Fit
-GorillaImg.ZIndex = 201
+local function CreateSkeleton()
+    local lines = {}
+    local joints = {
+        {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"},
+        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"},
+        {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"},
+        {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}
+    }
+    for _, j in ipairs(joints) do
+        local line = Drawing.new("Line")
+        line.Thickness, line.Visible = 1.5, false
+        table.insert(lines, {Line = line, A = j[1], B = j[2]})
+    end
+    return lines
+end
 
-local GorillaClose = Instance.new("TextButton", GorillaFrame)
-GorillaClose.Size, GorillaClose.Position = UDim2.new(0, 40, 0, 35), UDim2.new(1, -45, 0, 5)
-GorillaClose.Text, GorillaClose.TextColor3, GorillaClose.TextSize, GorillaClose.ZIndex = "✕", Color3.fromRGB(255, 255, 255), 20, 202
-ApplyModernStyle(GorillaClose, Color3.fromRGB(180, 30, 30), Color3.fromRGB(255, 50, 50), 6)
+local function IsVisible(targetPart)
+    if not Features.VisibleCheck then return true end
+    local char = LocalPlayer.Character
+    local head = char and char:FindFirstChild("Head")
+    if not head then return true end
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+    raycastParams.FilterDescendantsInstances = {char, targetPart.Parent}
+    local result = workspace:Raycast(head.Position, targetPart.Position - head.Position, raycastParams)
+    return result == nil
+end
 
-GorillaClose.MouseButton1Click:Connect(function()
-    GorillaFrame.Visible = false
-end)
+local function IsValidTarget(p)
+    if p == LocalPlayer then return false end
+    local ch = p.Character
+    local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+    if not hum or hum.Health <= 0 then return false end
+    if Features.TeamCheck and LocalPlayer.Team and p.Team and LocalPlayer.Team == p.Team then
+        return false
+    end
+    return true
+end
 
-AuthorLabel.MouseButton1Click:Connect(function()
-    GorillaFrame.Visible = true
-end)
+-- ПОШУК ЦІЛІ БІЛЯ ЦЕНТРУ ЕКРАНА (БЕЗ ПОТРЕБИ НАТИСКАТИ ПКМ)
+local function GetClosestTarget()
+    local target, minD = nil, Features.AimbotFOV
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if IsValidTarget(p) and p.Character then
+            local headPart = p.Character:FindFirstChild("Head")
+            local bodyPart = p.Character:FindFirstChild("HumanoidRootPart")
+            local chosenTargetPart = nil
+            local totalChance = Features.HeadChance + Features.BodyChance
+            if totalChance <= 0 then totalChance = 100 end
+            local rnd = math.random(1, totalChance)
+            if rnd <= Features.HeadChance then
+                chosenTargetPart = headPart or bodyPart
+            else
+                chosenTargetPart = bodyPart or headPart
+            end
+            if chosenTargetPart and IsVisible(chosenTargetPart) then
+                local pos, onS = Camera:WorldToViewportPoint(chosenTargetPart.Position)
+                if onS then
+                    local d = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+                    if d < minD then minD = d target = chosenTargetPart end
+                end
+            end
+        end
+    end
+    return target
+end
 
 task.spawn(function()
     local hue = 0
     while task.wait(0.03) do
         hue = (hue + 0.01) % 1
-        local rgbColor = Color3.fromHSV(hue, 0.9, 1)
-        AuthorLabel.TextColor3 = rgbColor
+        local rgbCol = Color3.fromHSV(hue, 1, 1)
+        OpenStroke.Color = rgbCol
+        
         if Features.RGB_Menu then
-            MainStroke.Color = rgbColor
-            HeaderStroke.Color = rgbColor
+            MainStroke.Color = rgbCol
+        else
+            MainStroke.Color = Color3.fromRGB(55, 45, 75)
+        end
+        
+        if Features.RGB_FOV then
+            FOVCircle.Color = rgbCol
         end
     end
 end)
 
---------------------------------------------------------------------
--- 5. ЛОГІКА СКРИПТА
---------------------------------------------------------------------
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness, FOVCircle.Filled, FOVCircle.Visible = 1.5, false, false
+RunService:BindToRenderStep("NeroHoleLoop", Enum.RenderPriority.Camera.Value + 1, function()
+    -- FOV коло чітко по центру екрана
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FOVCircle.Radius = Features.AimbotFOV
+    FOVCircle.Visible = Features.Aimbot
 
-local ESP_Store = {}
-local bodyVelocity, bodyGyro
+    if not Features.RGB_FOV then FOVCircle.Color = Features.ESP_BoxColor end
 
-RunService.RenderStepped:Connect(function()
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if Features.Fly and root then
-        if not bodyVelocity then
-            bodyVelocity = Instance.new("BodyVelocity", root)
-            bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-            bodyGyro = Instance.new("BodyGyro", root)
-            bodyGyro.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
-        end
-        bodyGyro.CFrame = Camera.CFrame
-        local moveDir = Vector3.new()
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
-        bodyVelocity.Velocity = moveDir * Features.FlySpeed
-    else
-        if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
-        if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
-    end
-end)
-
-RunService:BindToRenderStep("ToboxLoop", Enum.RenderPriority.Camera.Value + 1, function()
-    local mPos = UserInputService:GetMouseLocation()
-    FOVCircle.Position, FOVCircle.Radius, FOVCircle.Visible = mPos, Features.AimbotFOV, Features.Aimbot
-    
-    if Features.RGB_FOV then
-        FOVCircle.Color = Color3.fromHSV((tick() % 5) / 5, 1, 1)
-    else
-        FOVCircle.Color = Features.ESP_FOVColor
+    local currentEspColor = Features.ESP_BoxColor
+    if Features.RGB_ESP then
+        currentEspColor = Color3.fromHSV((tick() % 5) / 5, 1, 1)
     end
 
-    local localRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= LocalPlayer then
-            if not ESP_Store[p] then
-                ESP_Store[p] = {Box = Drawing.new("Square"), Tracer = Drawing.new("Line"), Name = Drawing.new("Text")}
-                ESP_Store[p].Box.Thickness, ESP_Store[p].Name.Size, ESP_Store[p].Name.Center = 1.5, 14, true
-            end
-            local e, ch = ESP_Store[p], p.Character
-            local hum, root, head = ch and ch:FindFirstChildOfClass("Humanoid"), ch and ch:FindFirstChild("HumanoidRootPart"), ch and ch:FindFirstChild("Head")
-            
-            local distance = (localRoot and root) and (localRoot.Position - root.Position).Magnitude or 9999
-            local valid = ch and root and head and hum and hum.Health > 0 and (distance <= Features.ESP_MaxDistance) and not (Features.TeamCheck and p.Team == LocalPlayer.Team)
-
-            if valid then
-                local v, onS = Camera:WorldToViewportPoint(root.Position)
-                local hV, lV = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0)), Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
-                if onS then
-                    local h = math.abs(hV.Y - lV.Y) local w = h / 1.8
-                    e.Box.Visible, e.Box.Size, e.Box.Position, e.Box.Color = Features.ESP_Box, Vector2.new(w, h), Vector2.new(v.X - w/2, hV.Y), Features.ESP_BoxColor
-                    e.Tracer.Visible, e.Tracer.From, e.Tracer.To, e.Tracer.Color = Features.ESP_Tracers, Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y), Vector2.new(v.X, lV.Y), Features.ESP_BoxColor
-                    e.Name.Visible, e.Name.Text, e.Name.Position = Features.ESP_Names, p.Name .. " [" .. math.floor(distance) .. "m]", Vector2.new(v.X, hV.Y - 16)
-                else e.Box.Visible, e.Tracer.Visible, e.Name.Visible = false, false, false end
-            else 
-                if e.Box then e.Box.Visible, e.Tracer.Visible, e.Name.Visible = false, false, false end 
+    -- АІМБОТ ПРАЦЮЄ АВТОМАТИЧНО ЩОЙНО УВІМКНЕНО (БЕЗ ПКМ)
+    if Features.Aimbot then
+        local target = GetClosestTarget()
+        if target then
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Position), 0.75)
+            if Features.AutoFire then
+                pcall(function()
+                    VirtualUser:Button1Down(Vector2.new(0,0))
+                    task.wait(0.05)
+                    VirtualUser:Button1Up(Vector2.new(0,0))
+                end)
             end
         end
     end
 
-    local isPressed = (Features.Platform == "PC") and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) or true
+    if Features.CameraFOVEnabled then
+        Camera.FieldOfView = Features.CameraFOVVal
+    end
 
-    if Features.Aimbot and isPressed then
-        local target, minD = nil, Features.AimbotFOV
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                local targetPart = p.Character:FindFirstChild(Features.AimTarget) or p.Character:FindFirstChild("Head")
-                local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                if targetPart and hum and hum.Health > 0 and not (Features.TeamCheck and p.Team == LocalPlayer.Team) then
-                    local pos, onS = Camera:WorldToViewportPoint(targetPart.Position)
-                    if onS then
-                        local d = (Vector2.new(pos.X, pos.Y) - mPos).Magnitude
-                        if d < minD then minD = d target = targetPart end
+    -- Радар
+    if Features.Radar_Enabled then
+        for _, dot in pairs(RadarDots) do dot.Visible = false end
+        local myChar = LocalPlayer.Character
+        local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        
+        if myRoot then
+            local count = 1
+            for _, p in pairs(Players:GetPlayers()) do
+                if p ~= LocalPlayer and IsValidTarget(p) and p.Character then
+                    local pRoot = p.Character:FindFirstChild("HumanoidRootPart")
+                    if pRoot then
+                        local dist = (pRoot.Position - myRoot.Position).Magnitude
+                        if dist <= Features.Radar_MaxDist then
+                            local dot = RadarDots[count]
+                            if not dot then
+                                dot = Instance.new("Frame", RadarDotsContainer)
+                                dot.Size = UDim2.new(0, 6, 0, 6)
+                                ApplyTacticalStyle(dot, Color3.fromRGB(255, 40, 40), Color3.fromRGB(255, 255, 255), 3)
+                                RadarDots[count] = dot
+                            end
+                            
+                            local relPos = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + Vector3.new(Camera.CFrame.LookVector.X, 0, Camera.CFrame.LookVector.Z)):PointToObjectSpace(pRoot.Position)
+                            local radarSize = RadarFrame.AbsoluteSize.X
+                            local scale = (radarSize / 2) / Features.Radar_MaxDist
+                            
+                            local x = (radarSize / 2) + (relPos.X * scale)
+                            local y = (radarSize / 2) + (-relPos.Z * scale)
+                            
+                            if x > 4 and x < radarSize - 4 and y > 4 and y < radarSize - 4 then
+                                dot.Visible = true
+                                dot.Position = UDim2.new(0, x - 3, 0, y - 3)
+                            else
+                                dot.Visible = false
+                            end
+                            count = count + 1
+                        end
                     end
                 end
             end
         end
-        if target then 
-            if Features.AimAssist then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+    else
+        for _, dot in pairs(RadarDots) do dot.Visible = false end
+    end
+
+    for p, e in pairs(ESP_Store) do
+        if not p or not p.Parent then
+            if e.Box then e.Box:Remove() end
+            if e.HPBarBg then e.HPBarBg:Remove() end
+            if e.HPBarFill then e.HPBarFill:Remove() end
+            if e.NameBg then e.NameBg:Remove() end
+            if e.NameText then e.NameText:Remove() end
+            if e.Distance then e.Distance:Remove() end
+            if e.Tracer then e.Tracer:Remove() end
+            if e.Skeleton then for _, sk in ipairs(e.Skeleton) do sk.Line:Remove() end end
+            ESP_Store[p] = nil
+        end
+    end
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            if not ESP_Store[p] then
+                ESP_Store[p] = {
+                    Box = Drawing.new("Square"),
+                    HPBarBg = Drawing.new("Square"),
+                    HPBarFill = Drawing.new("Square"),
+                    NameBg = Drawing.new("Square"),
+                    NameText = Drawing.new("Text"),
+                    Distance = Drawing.new("Text"),
+                    Tracer = Drawing.new("Line"),
+                    Skeleton = CreateSkeleton()
+                }
+                ESP_Store[p].Box.Thickness = 1.5
+                ESP_Store[p].HPBarBg.Filled, ESP_Store[p].HPBarFill.Filled = true, true
+                ESP_Store[p].HPBarBg.Color = Color3.fromRGB(20, 20, 20)
+                ESP_Store[p].NameBg.Filled = true
+                ESP_Store[p].NameBg.Color = Color3.fromRGB(0, 0, 0)
+                ESP_Store[p].NameText.Size, ESP_Store[p].NameText.Center = 13, true
+                ESP_Store[p].NameText.Color = Color3.fromRGB(255, 255, 255)
+                ESP_Store[p].Distance.Size, ESP_Store[p].Distance.Center = 12, true
+            end
+
+            local e, ch = ESP_Store[p], p.Character
+            local root = ch and ch:FindFirstChild("HumanoidRootPart")
+            local head = ch and ch:FindFirstChild("Head")
+            local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+            local valid = root and head and hum and hum.Health > 0
+
+            if valid then
+                local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
+                local headV = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                local legV = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, 3, 0))
+
+                local boxColor = currentEspColor
+                if not Features.RGB_ESP then
+                    local isVis = IsVisible(head)
+                    boxColor = isVis and Features.ESP_VisibleColor or Features.ESP_HiddenColor
+                end
+
+                if onScreen then
+                    local baseH = math.abs(headV.Y - legV.Y)
+                    local h = baseH * 1.2
+                    local w = (baseH / 2) * 1.2
+
+                    e.Box.Visible = Features.ESP_Box
+                    e.Box.Size = Vector2.new(w, h)
+                    e.Box.Position = Vector2.new(pos.X - w/2, headV.Y)
+                    e.Box.Color = boxColor
+
+                    if Features.ESP_Box and Features.ESP_HPBar then
+                        local hpPct = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+                        e.HPBarBg.Visible = true
+                        e.HPBarBg.Size = Vector2.new(3, h)
+                        e.HPBarBg.Position = Vector2.new(pos.X - w/2 - 6, headV.Y)
+
+                        e.HPBarFill.Visible = true
+                        e.HPBarFill.Size = Vector2.new(3, h * hpPct)
+                        e.HPBarFill.Position = Vector2.new(pos.X - w/2 - 6, headV.Y + (h * (1 - hpPct)))
+                        e.HPBarFill.Color = Color3.fromRGB(0, 255, 100)
+                    else
+                        e.HPBarBg.Visible, e.HPBarFill.Visible = false, false
+                    end
+
+                    if Features.ESP_Names then
+                        local hpVal = math.floor(hum.Health)
+                        e.NameText.Visible = true
+                        e.NameText.Text = hpVal .. "hp"
+                        e.NameText.Position = Vector2.new(pos.X, headV.Y - 18)
+
+                        e.NameBg.Visible = true
+                        e.NameBg.Size = Vector2.new(36, 16)
+                        e.NameBg.Position = Vector2.new(pos.X - 18, headV.Y - 20)
+                    else
+                        e.NameText.Visible = false
+                        e.NameBg.Visible = false
+                    end
+
+                    if Features.ESP_Distance and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                        local dist = math.floor((LocalPlayer.Character.HumanoidRootPart.Position - root.Position).Magnitude)
+                        e.Distance.Visible = true
+                        e.Distance.Text = "[" .. dist .. "m]"
+                        e.Distance.Position = Vector2.new(pos.X, legV.Y + 4)
+                        e.Distance.Color = Color3.fromRGB(200, 200, 200)
+                    else
+                        e.Distance.Visible = false
+                    end
+
+                    e.Tracer.Visible = Features.ESP_Tracers
+                    e.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
+                    e.Tracer.To = Vector2.new(pos.X, legV.Y)
+                    e.Tracer.Color = boxColor
+
+                    if Features.ESP_Skeleton then
+                        for _, sk in ipairs(e.Skeleton) do
+                            local pA = ch:FindFirstChild(sk.A)
+                            local pB = ch:FindFirstChild(sk.B)
+                            if pA and pB then
+                                local vA, sA = Camera:WorldToViewportPoint(pA.Position)
+                                local vB, sB = Camera:WorldToViewportPoint(pB.Position)
+                                if sA and sB then
+                                    sk.Line.Visible = true
+                                    sk.Line.From = Vector2.new(vA.X, vA.Y)
+                                    sk.Line.To = Vector2.new(vB.X, vB.Y)
+                                    sk.Line.Color = boxColor
+                                else
+                                    sk.Line.Visible = false
+                                end
+                            else
+                                sk.Line.Visible = false
+                            end
+                        end
+                    else
+                        for _, sk in ipairs(e.Skeleton) do sk.Line.Visible = false end
+                    end
+                else
+                    e.Box.Visible, e.HPBarBg.Visible, e.HPBarFill.Visible, e.NameBg.Visible, e.NameText.Visible, e.Distance.Visible, e.Tracer.Visible = false, false, false, false, false, false, false
+                    for _, sk in ipairs(e.Skeleton) do sk.Line.Visible = false end
+                end
             else
-                Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, target.Position), 0.25)
+                e.Box.Visible, e.HPBarBg.Visible, e.HPBarFill.Visible, e.NameBg.Visible, e.NameText.Visible, e.Distance.Visible, e.Tracer.Visible = false, false, false, false, false, false, false
+                for _, sk in ipairs(e.Skeleton) do sk.Line.Visible = false end
             end
         end
     end
 end)
 
 RunService.Stepped:Connect(function()
-    if LocalPlayer.Character and Features.Noclip then
-        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
-end)
-
--- ВИПРАВЛЕНИЙ ТА УСТАНОВЛЕНИЙ ШВИДКИЙ ВИКЛИК ДЛЯ SUPER JUMP ТА SPEEDHACK
-RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        if Features.SpeedHack then 
-            hum.WalkSpeed = Features.SpeedValue 
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            if Features.SpeedHack then hum.WalkSpeed = Features.SpeedValue end
+            if Features.JumpHack then hum.UseJumpPower = true hum.JumpPower = Features.JumpValue end
         end
-        if Features.JumpHack then 
-            hum.UseJumpPower = true 
-            hum.JumpPower = Features.JumpValue 
+        if Features.Noclip then
+            for _, v in pairs(char:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
         end
     end
 end)
 
--- ВИПРАВЛЕНИЙ INFINITE JUMP
 UserInputService.JumpRequest:Connect(function()
-    if Features.InfJump then
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-            hum.Jump = true
-        end
-    end
+    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if Features.InfJump and hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
